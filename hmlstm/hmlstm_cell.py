@@ -57,7 +57,7 @@ class HMLSTMCell(rnn_cell_impl.RNNCell):
 
         s_recurrent = h             # [B, h_l]
 
-        expanded_z = z              # [B, 1]
+        expanded_z = tf.expand_dims(tf.squeeze(z), 1)       # [B, 1]
         s_above = tf.multiply(expanded_z, ha)   # [B, ha_l]
         s_below = tf.multiply(zb, hb)           # [B, hb_l]
 
@@ -66,8 +66,7 @@ class HMLSTMCell(rnn_cell_impl.RNNCell):
 
         bias_init = tf.constant_initializer(-1e5, dtype=tf.float32)
         # [B, 4 * h_l + 1]
-        concat = rnn_cell_impl._linear(states, length, bias=False,
-                                       bias_initializer=bias_init)
+        concat = tf.layers.dense(tf.concat(states, axis=-1), length, use_bias=False)
 
         gate_splits = tf.constant(
             ([self._num_units] * 4) + [1], dtype=tf.int32)
@@ -98,8 +97,8 @@ class HMLSTMCell(rnn_cell_impl.RNNCell):
 
         new_c: [B, h_l]
         '''
-        z = tf.squeeze(z, axis=[1])                           # [B]
-        zb = tf.squeeze(zb, axis=[1])                         # [B]
+        z = tf.squeeze(z)                                     # [B]
+        zb = tf.squeeze(zb)                         # [B]
         new_c = tf.where(
             tf.equal(z, tf.constant(1., dtype=tf.float32)),   # [B]
             tf.multiply(i, g, name='c'),                      # [B, h_l], flush
@@ -118,8 +117,8 @@ class HMLSTMCell(rnn_cell_impl.RNNCell):
 
         new_h: [B, h_l]
         '''
-        z = tf.squeeze(z, axis=[1])             # [B]
-        zb = tf.squeeze(zb, axis=[1])           # [B]
+        z = tf.squeeze(z)             # [B]
+        zb = tf.squeeze(zb)           # [B]
         new_h = tf.where(
             tf.logical_and(
                 tf.equal(z, tf.constant(0., dtype=tf.float32)),
@@ -143,4 +142,3 @@ class HMLSTMCell(rnn_cell_impl.RNNCell):
                 new_z = tf.round(sigmoided, name=name)
 
         return tf.squeeze(new_z, axis=1)
-
